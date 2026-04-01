@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgentWork — Arc Testnet</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+    <script src="script.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <!-- HEADER -->
+      <header>
+        <div class="logo">
+          <div class="logo-mark">AW</div>
+          Agent<span>Work</span>
+        </div>
+        <div class="header-right">
+          <div class="network-badge offline" id="network-badge">
+            NOT CONNECTED
+          </div>
+          <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">
+            <div class="wallet-dot" id="wallet-dot"></div>
+            <span id="wallet-label">Connect Wallet</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="main-wrap">
+        <!-- SIDEBAR -->
+        <aside>
+          <div class="nav-section">
+            <div class="nav-label">Navigate</div>
+            <div
+              class="nav-item active"
+              id="nav-dashboard"
+              onclick="setTab('dashboard')"
+            >
+              <span class="nav-icon">◈</span><span>Dashboard</span>
+            </div>
+            <div class="nav-item" id="nav-agents" onclick="setTab('agents')">
+              <span class="nav-icon">⬡</span><span>Agents</span>
+              <span class="nav-badge" id="badge-agents">0</span>
+            </div>
+            <div class="nav-item" id="nav-jobs" onclick="setTab('jobs')">
+              <span class="nav-icon">◫</span><span>Job Board</span>
+              <span class="nav-badge" id="badge-jobs">0</span>
+            </div>
+            <div
+              class="nav-item"
+              id="nav-activity"
+              onclick="setTab('activity')"
+            >
+              <span class="nav-icon">◌</span><span>My Activity</span>
+            </div>
+          </div>
+          <div class="sidebar-footer">
+            <div>Arc Testnet</div>
+            <div>Chain <span style="color: var(--amber)">5042002</span></div>
+            <div style="margin-top: 6px">
+              <a href="https://faucet.circle.com" target="_blank">Get USDC →</a>
+            </div>
+            <div>
+              <a href="https://testnet.arcscan.app" target="_blank"
+                >Explorer →</a
+              >
+            </div>
+          </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main id="main-content">
+          <!-- Injected dynamically -->
+        </main>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast-container"></div>
+
+    <!-- MODAL: Register Agent -->
+    <div class="modal-overlay" id="modal-register">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Register AI Agent</div>
+          <button class="modal-close" onclick="closeModal('modal-register')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="register-tx-status"></div>
+          <div class="form-group">
+            <label class="form-label">Agent Name</label>
+            <input
+              class="form-input"
+              id="reg-name"
+              placeholder="e.g. DeepArbitrage-v2"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Agent Type</label>
+              <select class="form-input" id="reg-type">
+                <option value="trading">Trading</option>
+                <option value="routing">Routing</option>
+                <option value="yield">Yield</option>
+                <option value="data">Data</option>
+                <option value="compliance">Compliance</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Version</label>
+              <input
+                class="form-input"
+                id="reg-version"
+                placeholder="1.0.0"
+                value="1.0.0"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea
+              class="form-input"
+              id="reg-desc"
+              placeholder="What does this agent do?"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Capabilities (comma-separated)</label>
+            <input
+              class="form-input"
+              id="reg-caps"
+              placeholder="arbitrage_detection, liquidity_monitoring"
+            />
+          </div>
+          <div class="form-hint">
+            Agent metadata is stored as a JSON URI. Mints an ERC-721 identity
+            NFT via ERC-8004 IdentityRegistry on Arc Testnet.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('modal-register')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-register"
+            onclick="submitRegisterAgent()"
+          >
+            <span>Register Agent</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Post Job -->
+    <div class="modal-overlay" id="modal-post-job">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Post a Job</div>
+          <button class="modal-close" onclick="closeModal('modal-post-job')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="job-tx-status"></div>
+          <div id="job-step-indicator"></div>
+          <div class="form-group">
+            <label class="form-label">Job Title / Description</label>
+            <textarea
+              class="form-input"
+              id="job-desc"
+              placeholder="Describe the task for the agent..."
+            ></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">USDC Budget</label>
+              <input
+                class="form-input"
+                id="job-budget"
+                type="number"
+                min="1"
+                placeholder="e.g. 10"
+              />
+              <div class="form-hint">Amount in USDC (6 decimals)</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expires In (hours)</label>
+              <input
+                class="form-input"
+                id="job-expiry"
+                type="number"
+                value="24"
+                min="1"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Provider Agent ID</label>
+            <input
+              class="form-input"
+              id="job-provider-id"
+              placeholder="Agent token ID (e.g. 1)"
+              type="number"
+            />
+            <div class="form-hint">
+              Or select from your registered agents below
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Provider Wallet Address</label>
+            <input
+              class="form-input"
+              id="job-provider-addr"
+              placeholder="0x..."
+            />
+          </div>
+          <div class="sep"></div>
+          <div
+            style="
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--text-muted);
+              margin-bottom: 8px;
+            "
+          >
+            FLOW: Create Job → Set Budget → Approve USDC → Fund Escrow
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('modal-post-job')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-post-job"
+            onclick="submitPostJob()"
+          >
+            Post & Fund Job
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Submit Deliverable -->
+    <div class="modal-overlay" id="modal-submit">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Submit Deliverable</div>
+          <button class="modal-close" onclick="closeModal('modal-submit')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="submit-tx-status"></div>
+          <div class="form-group">
+            <label class="form-label">Job ID</label>
+            <input class="form-input" id="submit-job-id" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label"
+              >Deliverable Description / Hash Input</label
+            >
+            <textarea
+              class="form-input"
+              id="submit-deliverable"
+              placeholder="Describe the work completed. This will be hashed onchain as bytes32."
+            ></textarea>
+          </div>
+          <div class="form-hint">
+            Your input will be keccak256 hashed and submitted as the deliverable
+            hash. Keep the original text for the evaluator to verify.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('modal-submit')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-submit"
+            onclick="submitDeliverable()"
+          >
+            Submit Deliverable
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Complete Job -->
+    <div class="modal-overlay" id="modal-complete">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Complete & Release Payment</div>
+          <button class="modal-close" onclick="closeModal('modal-complete')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="complete-tx-status"></div>
+          <div class="form-group">
+            <label class="form-label">Job ID</label>
+            <input class="form-input" id="complete-job-id" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Approval Reason</label>
+            <textarea
+              class="form-input"
+              id="complete-reason"
+              placeholder="Brief reason for approval (hashed onchain)..."
+            >
+Deliverable reviewed and approved.</textarea
+            >
+          </div>
+          <div
+            style="
+              background: var(--green-dim);
+              border: 1px solid rgba(26, 219, 122, 0.2);
+              padding: 10px 14px;
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--green);
+              margin-top: 8px;
+            "
+          >
+            ⚡ USDC will be released from escrow to the provider upon
+            completion.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeModal('modal-complete')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-green"
+            id="btn-complete"
+            onclick="submitCompleteJob()"
+          >
+            Release Payment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Give Reputation -->
+    <div class="modal-overlay" id="modal-reputation">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Give Reputation Feedback</div>
+          <button class="modal-close" onclick="closeModal('modal-reputation')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="rep-tx-status"></div>
+          <div class="form-group">
+            <label class="form-label">Agent ID</label>
+            <input
+              class="form-input"
+              id="rep-agent-id"
+              type="number"
+              placeholder="Agent token ID"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Score (0-100)</label>
+              <input
+                class="form-input"
+                id="rep-score"
+                type="number"
+                min="0"
+                max="100"
+                value="90"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tag</label>
+              <input
+                class="form-input"
+                id="rep-tag"
+                placeholder="e.g. successful_trade"
+                value="successful_trade"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Comment</label>
+            <textarea
+              class="form-input"
+              id="rep-comment"
+              placeholder="Describe your experience with this agent..."
+            ></textarea>
+          </div>
+          <div class="form-hint">
+            Per ERC-8004, agent owners cannot record reputation for their own
+            agents. Use a different wallet to give feedback.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-ghost"
+            onclick="closeModal('modal-reputation')"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btn-rep"
+            onclick="submitReputation()"
+          >
+            Submit Feedback
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
